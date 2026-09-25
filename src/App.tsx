@@ -100,7 +100,7 @@ export default function App() {
           <div className="text-center mb-4">
             <h1 className="text-4xl font-black text-green-800 mb-2 tracking-tight">Creador de Ligas Fulbo Pro</h1>
             <p className="text-gray-600 font-bold text-xs bg-white/70 px-4 py-1 rounded-full border border-gray-200 inline-block shadow-sm">
-              Gestor y simulador de ligas
+              Gestor y Simulador de Ligas
             </p>
           </div>
           <div className="w-full max-w-sm space-y-3">
