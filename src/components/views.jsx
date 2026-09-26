@@ -637,13 +637,24 @@ export const Dashboard = ({ tournaments, teams, updateTournaments, setView, setA
                   </div>
                   <div className="space-x-1.5 flex">
                     <button
-                      type="button"
-                      onClick={() => onResetTournament(t.id)}
-                      className="text-xs p-1.5 border border-amber-300 bg-amber-50 text-amber-800 rounded-lg font-bold hover:bg-amber-100"
-                      title="Reiniciar partidos y resultados de este torneo"
-                    >
-                      🔄 Reiniciar
-                    </button>
+  type="button"
+  onClick={() => {
+    let effIds = resolveEffectiveParticipants(t.id, tournaments, teams);
+    if (!effIds || effIds.length === 0) {
+      const detected = detectIncomingSlots(t.id, tournaments);
+      effIds = detected.map(s => s.slotId);
+    }
+    const freshFixtures = generateFixtures(t, effIds);
+    updateTournaments(tournaments.map(curr => curr.id === t.id ? {
+      ...curr,
+      fixtures: freshFixtures
+    } : curr));
+  }}
+  className="text-xs p-1.5 border border-amber-300 bg-amber-50 text-amber-800 rounded-lg font-bold hover:bg-amber-100 cursor-pointer"
+  title="Regenera los grupos y el calendario desde cero"
+>
+  🔄 Reiniciar
+</button>
                     <Button variant="outline" className="text-xs py-1 px-2.5" onClick={() => { setActiveTournamentId(t.id); setView('edit-tournament'); }}>⚙️ Ajustes</Button>
                     <Button variant="danger" className="text-xs py-1 px-2.5" onClick={() => setTournamentToDelete(t.id)}>Borrar</Button>
                   </div>
@@ -713,7 +724,6 @@ export const TournamentForm = ({ view, tournaments, teams, countries, updateTour
   const [modalCountryFilter, setModalCountryFilter] = useState('ALL');
   const isLocked = tForm.status === 'finished';
 
-  // Detecta automáticamente todos los cupos que provienen de otros torneos hacia este torneo
   const incomingDetectedSlots = useMemo(() => {
     return detectIncomingSlots(tForm.id, tournaments);
   }, [tForm.id, tournaments]);
@@ -799,34 +809,73 @@ export const TournamentForm = ({ view, tournaments, teams, countries, updateTour
       ...prev,
       slotPlacements: {
         ...(prev.slotPlacements || {}),
-        [slotId]: placement
+        [slotId]: Number(placement)
       }
     }));
   };
 
   const autoSortSlots = () => {
-    const capacity = parseInt(tForm.numTeams) || 8;
-    const slots = [...incomingDetectedSlots];
+    const numGroups = Math.max(1, parseInt(tForm.numGroups) || 2);
+    const capacityPerGroup = Math.max(1, Math.floor((parseInt(tForm.numTeams) || 32) / numGroups));
     const newPlacements = {};
+    const groupCounts = Array(numGroups).fill(0);
 
-    if (tForm.format === 'knockout') {
-      slots.forEach((s, idx) => {
-        newPlacements[s.slotId] = (idx % 2 === 0) ? idx : (capacity - 1 - idx);
+    if (tForm.format === 'groups') {
+      const bySource = {};
+      incomingDetectedSlots.forEach(s => {
+        const key = s.sourceTournamentId || 'DEFAULT';
+        if (!bySource[key]) bySource[key] = [];
+        bySource[key].push(s.slotId);
       });
-    } else if (tForm.format === 'groups') {
-      const numGroups = parseInt(tForm.numGroups) || 2;
-      slots.forEach((s, idx) => {
-        newPlacements[s.slotId] = idx % numGroups;
+
+      const shuffle = arr => [...arr].sort(() => Math.random() - 0.5);
+
+      Object.values(bySource).forEach(slotsArray => {
+        slotsArray.forEach(slotId => {
+          let chosenGroup = -1;
+          const candidateGroups = shuffle(Array.from({ length: numGroups }, (_, i) => i));
+
+          for (let g of candidateGroups) {
+            if (groupCounts[g] < capacityPerGroup) {
+              chosenGroup = g;
+              break;
+            }
+          }
+
+          if (chosenGroup === -1) {
+            for (let g = 0; g < numGroups; g++) {
+              if (groupCounts[g] < capacityPerGroup) {
+                chosenGroup = g;
+                break;
+              }
+            }
+          }
+
+          if (chosenGroup !== -1) {
+            newPlacements[slotId] = chosenGroup;
+            groupCounts[chosenGroup]++;
+          }
+        });
+      });
+    } else {
+      const capacity = Math.max(2, parseInt(tForm.numTeams) || incomingDetectedSlots.length || 8);
+      const shuffledLines = Array.from({ length: capacity }, (_, i) => i).sort(() => Math.random() - 0.5);
+      incomingDetectedSlots.forEach((s, idx) => {
+        newPlacements[s.slotId] = shuffledLines[idx % shuffledLines.length];
       });
     }
-    setTForm(prev => ({ ...prev, slotPlacements: newPlacements }));
+
+    setTForm(prev => ({
+      ...prev,
+      slotPlacements: { ...newPlacements },
+      fixtures: null
+    }));
   };
 
   const handleSave = (e) => {
     e.preventDefault();
     const finalNumTeams = tForm.numTeams === '' ? 2 : Math.max(1, parseInt(tForm.numTeams) || 2);
     const fixedParticipants = tForm.startEmpty ? [] : (tForm.participants || []);
-    const slotIds = incomingDetectedSlots.map(s => s.slotId);
 
     let manualKnockoutOrder = null;
     if (tForm.format === 'knockout' && tForm.slotPlacements) {
@@ -854,13 +903,16 @@ export const TournamentForm = ({ view, tournaments, teams, countries, updateTour
       legs: tForm.legs || 1,
       finalLegs: tForm.finalLegs ?? (tForm.legs || 1),
       manualKnockout: manualKnockoutOrder,
-      participants: Array.from(new Set([...fixedParticipants, ...slotIds])).slice(0, finalNumTeams)
+      participants: fixedParticipants
     };
 
-    if (finalForm.status === 'started' && (!finalForm.fixtures || finalForm.fixtures.length === 0)) {
-      const effIds = resolveEffectiveParticipants(finalForm.id, tournaments, teams);
-      const participantIds = effIds.length > 0 ? effIds : (finalForm.participants || []);
-      finalForm.fixtures = generateFixtures(finalForm, participantIds);
+    // Si está iniciado, SIEMPRE forzar la regeneración del fixture para aplicar los grupos actuales de slotPlacements
+    if (finalForm.status === 'started') {
+      let effIds = resolveEffectiveParticipants(finalForm.id, tournaments, teams);
+      if (!effIds || effIds.length === 0) {
+        effIds = incomingDetectedSlots.map(s => s.slotId);
+      }
+      finalForm.fixtures = generateFixtures(finalForm, effIds);
     }
 
     if (finalForm.status === 'draft') finalForm.fixtures = null;
@@ -1064,14 +1116,14 @@ export const TournamentForm = ({ view, tournaments, teams, countries, updateTour
           <div className="flex justify-between items-center">
             <div>
               <span className="text-sm font-bold text-gray-900 block">Equipos Fijos Iniciales</span>
-              <span className={`text-xs font-bold ${tForm.participants?.length === 0 ? 'text-amber-600' : 'text-blue-600'}`}>
-                {tForm.participants?.length === 0 
+              <span className={`text-xs font-bold ${tForm.startEmpty || (tForm.participants || []).length === 0 ? 'text-amber-600' : 'text-blue-600'}`}>
+                {tForm.startEmpty || (tForm.participants || []).length === 0 
                   ? "Torneo vacío (clasificarán desde otros torneos)" 
-                  : `${tForm.participants?.length || 0} / ${tForm.numTeams || 10} seleccionados`}
+                  : `${(tForm.participants || []).length} / ${tForm.numTeams || 10} seleccionados`}
               </span>
             </div>
             <div className="flex space-x-1.5">
-              {tForm.participants?.length > 0 && (
+              {(tForm.participants || []).length > 0 && (
                 <button
                   type="button"
                   disabled={isLocked}
@@ -1132,9 +1184,17 @@ export const TournamentForm = ({ view, tournaments, teams, countries, updateTour
           ) : (
             <div className="space-y-2 max-h-56 overflow-y-auto no-scrollbar pr-1">
               {incomingDetectedSlots.map((slot, sIdx) => {
-                const currentPlacement = tForm.slotPlacements?.[slot.slotId] ?? (sIdx % (parseInt(tForm.numTeams) || 8));
+                const numGroups = Math.max(1, parseInt(tForm.numGroups) || 2);
+                const rawVal = tForm.slotPlacements?.[slot.slotId];
+                const currentPlacement = (rawVal !== undefined && rawVal !== null)
+                  ? parseInt(rawVal, 10)
+                  : (sIdx % numGroups);
+
                 return (
-                  <div key={slot.slotId} className="bg-white p-2.5 rounded-xl border border-amber-200 flex items-center justify-between shadow-sm text-xs">
+                  <div 
+                    key={`${slot.slotId}-${currentPlacement}`} 
+                    className="bg-white p-2.5 rounded-xl border border-amber-200 flex items-center justify-between shadow-sm text-xs"
+                  >
                     <div className="flex items-center space-x-2">
                       <span className="bg-amber-100 text-amber-900 px-2 py-0.5 rounded text-[10px] font-black uppercase">
                         {slot.sourceName}
@@ -1148,22 +1208,22 @@ export const TournamentForm = ({ view, tournaments, teams, countries, updateTour
                       </span>
                       {tForm.format === 'knockout' ? (
                         <select
-                          value={currentPlacement}
-                          onChange={e => setSlotTargetPlacement(slot.slotId, parseInt(e.target.value))}
+                          value={String(currentPlacement)}
+                          onChange={e => setSlotTargetPlacement(slot.slotId, parseInt(e.target.value, 10))}
                           className="p-1 border border-gray-300 rounded font-black bg-gray-50 text-xs"
                         >
                           {Array.from({ length: parseInt(tForm.numTeams) || 8 }).map((_, lIdx) => (
-                            <option key={lIdx} value={lIdx}>Línea #{lIdx + 1}</option>
+                            <option key={lIdx} value={String(lIdx)}>Línea #{lIdx + 1}</option>
                           ))}
                         </select>
                       ) : (
                         <select
-                          value={currentPlacement}
-                          onChange={e => setSlotTargetPlacement(slot.slotId, parseInt(e.target.value))}
+                          value={String(currentPlacement)}
+                          onChange={e => setSlotTargetPlacement(slot.slotId, parseInt(e.target.value, 10))}
                           className="p-1 border border-gray-300 rounded font-black bg-gray-50 text-xs"
                         >
-                          {Array.from({ length: parseInt(tForm.numGroups) || 2 }).map((_, gIdx) => (
-                            <option key={gIdx} value={gIdx}>Grupo {String.fromCharCode(65 + gIdx)}</option>
+                          {Array.from({ length: numGroups }).map((_, gIdx) => (
+                            <option key={gIdx} value={String(gIdx)}>Grupo {String.fromCharCode(65 + gIdx)}</option>
                           ))}
                         </select>
                       )}
@@ -1537,7 +1597,120 @@ export const PlayView = ({ tournaments, teams, updateTournaments, activeTourname
   const isKnockout = tournament.format === 'knockout';
   const numPaths = parseInt(tournament.numPaths) || 1;
 
-  // Resuelve nombre y escudo de un equipo o de un slot pendiente
+  const handleHardResetTournament = () => {
+    const numGroups = parseInt(tournament.numGroups) || 8;
+    const capacityPerGroup = Math.max(2, Math.floor((parseInt(tournament.numTeams) || 32) / numGroups));
+    const totalRequired = numGroups * capacityPerGroup;
+
+    // 1. Obtener cupos reales actuales directamente desde las reglas
+    const detected = detectIncomingSlots(tournament.id, tournaments);
+    let pool = detected.map(s => s.slotId);
+
+    // Si tiene participantes fijos seleccionados, incluirlos
+    if (tournament.participants && tournament.participants.length > 0) {
+      pool = [...tournament.participants, ...pool];
+    }
+
+    pool = [...new Set(pool.filter(Boolean))];
+
+    // Completar solo en caso de que falten plazas
+    let fillCounter = 1;
+    while (pool.length < totalRequired) {
+      const placeholder = `SLOT:PENDING:${fillCounter++}`;
+      if (!pool.includes(placeholder)) pool.push(placeholder);
+    }
+    pool = pool.slice(0, totalRequired);
+
+    // 2. Barajar aleatoriamente
+    pool.sort(() => Math.random() - 0.5);
+
+    // 3. Distribuir estrictamente en 8 grupos de 4 integrantes
+    const groups = Array.from({ length: numGroups }, (_, i) => pool.slice(i * capacityPerGroup, (i + 1) * capacityPerGroup));
+    const newPlacements = {};
+    groups.forEach((gTeams, gIdx) => {
+      gTeams.forEach(id => {
+        newPlacements[id] = gIdx;
+      });
+    });
+
+    // 4. Generar partidos limpios desde cero
+    const legs = parseInt(tournament.legs) || 1;
+    const freshFixtures = [];
+
+    groups.forEach((gTeams, gIdx) => {
+      const n = gTeams.length;
+      const rounds = n - 1;
+      const matchesPerRound = n / 2;
+
+      const gMatches = [];
+      for (let round = 0; round < rounds; round++) {
+        for (let m = 0; m < matchesPerRound; m++) {
+          const homeIdx = (round + m) % (n - 1);
+          let awayIdx = (n - 1 - m + round) % (n - 1);
+          if (m === 0) awayIdx = n - 1;
+
+          const isAlt = (round % 2 === 1 && m === 0);
+          gMatches.push({
+            id: 'fix_' + Math.random().toString(36).substr(2, 9),
+            group: gIdx,
+            round: round + 1,
+            home: isAlt ? gTeams[awayIdx] : gTeams[homeIdx],
+            away: isAlt ? gTeams[homeIdx] : gTeams[awayIdx],
+            homeScore: '',
+            awayScore: '',
+            homeGoals: [],
+            awayGoals: [],
+            played: false,
+            isPlayoff: false
+          });
+        }
+      }
+
+      if (legs === 2) {
+        const secondLeg = gMatches.map(m => ({
+          id: 'fix_' + Math.random().toString(36).substr(2, 9),
+          group: gIdx,
+          round: m.round + rounds,
+          home: m.away,
+          away: m.home,
+          homeScore: '',
+          awayScore: '',
+          homeGoals: [],
+          awayGoals: [],
+          played: false,
+          isPlayoff: false
+        }));
+        freshFixtures.push(...gMatches, ...secondLeg);
+      } else {
+        freshFixtures.push(...gMatches);
+      }
+    });
+
+    freshFixtures.sort((a, b) => a.round !== b.round ? a.round - b.round : a.group - b.group);
+
+    const updatedTournament = {
+      ...tournament,
+      slotPlacements: newPlacements,
+      manualPlacements: newPlacements,
+      fixtures: freshFixtures
+    };
+
+    // Actualizar estado y persistencia
+    try {
+      const KEY = 'futbol-league-manager-tournaments';
+      const stored = JSON.parse(localStorage.getItem(KEY) || '[]');
+      const idx = stored.findIndex(t => t.id === tournament.id);
+      if (idx !== -1) {
+        stored[idx] = updatedTournament;
+        localStorage.setItem(KEY, JSON.stringify(stored));
+      }
+    } catch (e) {
+      console.error(e);
+    }
+
+    updateTournaments(tournaments.map(t => t.id === tournament.id ? updatedTournament : t));
+  };
+
   const getTeamDisplay = (id) => {
     if (!id || id === 'TBD') return { name: 'Por definir', isSlot: false, team: null };
     if (id.startsWith('SLOT:')) {
@@ -1558,19 +1731,10 @@ export const PlayView = ({ tournaments, teams, updateTournaments, activeTourname
     return { name: tm?.name || id, isSlot: false, team: tm };
   };
 
-  // Obtener los grupos reales calculados de la tabla
   const currentGroupsData = useMemo(() => {
     if (tournament.format !== 'groups') return [];
     return getGroupDetailedStandings(tournament, teams, tournaments);
   }, [tournament, teams, tournaments]);
-
-  // Identifica de forma infalible a qué grupo pertenece un partido basándose en el equipo local
-  const getMatchRealGroupIndex = (match) => {
-    if (tournament.format !== 'groups' || !currentGroupsData.length) return match.group ?? 0;
-    const hResolved = (match.home && match.home.startsWith('SLOT:')) ? resolveSlotTeamId(match.home, tournaments, teams) : match.home;
-    const foundIdx = currentGroupsData.findIndex(g => g.some(t => t.id === hResolved || t.id === match.home));
-    return foundIdx !== -1 ? foundIdx : (match.group ?? 0);
-  };
 
   const updateMatchValue = (matchId, field, val) => {
     let newFixtures = (tournament.fixtures || []).map(m => {
@@ -1751,7 +1915,6 @@ export const PlayView = ({ tournaments, teams, updateTournaments, activeTourname
   };
 
   const handleResetPlayoffs = () => {
-    // Conserva únicamente los partidos de la fase regular de grupos
     const regularMatches = (tournament.fixtures || []).filter(m => !m.isPlayoff);
     updateTournaments(tournaments.map(t => t.id === tournament.id ? {
       ...t,
@@ -1761,7 +1924,6 @@ export const PlayView = ({ tournaments, teams, updateTournaments, activeTourname
 
   const realStandings = useMemo(() => calculateTournamentStandings(tournament, tournaments, teams), [tournament, effectiveIds, teams]);
 
-  // Agrupamiento cronológico global por Fecha (Fecha 1 de todos los grupos juntos)
   const matchesByBlock = useMemo(() => {
     if (!tournament.fixtures) return {};
     const blocks = {};
@@ -1770,7 +1932,7 @@ export const PlayView = ({ tournaments, teams, updateTournaments, activeTourname
       .filter(m => !m.isPlayoff)
       .sort((a, b) => {
         if (a.round !== b.round) return a.round - b.round;
-        return getMatchRealGroupIndex(a) - getMatchRealGroupIndex(b);
+        return (a.group ?? 0) - (b.group ?? 0);
       });
 
     sorted.forEach(m => {
@@ -1780,7 +1942,7 @@ export const PlayView = ({ tournaments, teams, updateTournaments, activeTourname
     });
 
     return blocks;
-  }, [tournament.fixtures, currentGroupsData]);
+  }, [tournament.fixtures]);
 
   const playoffMatches = useMemo(() => {
     return (tournament.fixtures || []).filter(m => m.isPlayoff);
@@ -1807,9 +1969,9 @@ export const PlayView = ({ tournaments, teams, updateTournaments, activeTourname
 
         <div className="flex items-center space-x-2">
           <button
-            onClick={() => onResetTournament(tournament.id)}
+            onClick={handleHardResetTournament}
             className="text-xs bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-400/40 px-3 py-1.5 rounded-lg font-bold cursor-pointer"
-            title="Reiniciar partidos de este torneo"
+            title="Regenera el fixture con los clasificados actuales y limpia marcadores"
           >
             🔄 Reiniciar
           </button>
@@ -1835,8 +1997,6 @@ export const PlayView = ({ tournaments, teams, updateTournaments, activeTourname
       <div className="p-4 max-w-[100vw] mx-auto animate-fade-in mt-2 overflow-hidden">
         {(isKnockout || tab === 'playoffs') ? (
           <div className="bg-white rounded-2xl shadow-sm p-4 border border-gray-200 max-w-[95vw] mx-auto overflow-x-auto custom-scrollbar">
-            
-            {/* Encabezado del Cuadro y Selector de Rutas si numPaths > 1 */}
             <div className="flex flex-wrap justify-between items-center mb-6 gap-3">
               <div>
                 <h3 className="font-black text-xl text-gray-900 tracking-tight">
@@ -1933,7 +2093,6 @@ export const PlayView = ({ tournaments, teams, updateTournaments, activeTourname
                               {rIndex > 0 && <div className="absolute -left-6 top-1/2 w-6 h-0.5 bg-gray-300 -z-10"></div>}
 
                               <div className="flex flex-col space-y-2">
-                                {/* Local */}
                                 <div className="flex items-center justify-between">
                                   <div className="flex items-center space-x-2 flex-1 w-0">
                                     {homeDisplay.team ? (
@@ -1965,7 +2124,6 @@ export const PlayView = ({ tournaments, teams, updateTournaments, activeTourname
                                   )}
                                 </div>
 
-                                {/* Visitante */}
                                 <div className="flex items-center justify-between">
                                   <div className="flex items-center space-x-2 flex-1 w-0">
                                     {awayDisplay.team ? (
@@ -2011,10 +2169,9 @@ export const PlayView = ({ tournaments, teams, updateTournaments, activeTourname
             <div className="text-center text-gray-500 py-16 bg-white rounded-2xl border-2 border-dashed border-gray-200 shadow-sm font-medium">No hay fixture disponible.</div>
           ) : (
             Object.entries(matchesByBlock).map(([blockName, matches]) => {
-              // Subdividir los partidos de esta fecha por su grupo real
               const matchesByRealGroup = {};
               matches.forEach(m => {
-                const gIdx = getMatchRealGroupIndex(m);
+                const gIdx = tournament.format === 'groups' ? (m.group ?? 0) : 0;
                 if (!matchesByRealGroup[gIdx]) matchesByRealGroup[gIdx] = [];
                 matchesByRealGroup[gIdx].push(m);
               });

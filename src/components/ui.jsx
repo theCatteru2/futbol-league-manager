@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { generateId } from '../data';
-import { getAutomaticLineup, calculateTacticalModifier } from '../logic';
+import { getAutomaticLineup, calculateTacticalModifier, resolveSlotTeamId } from '../logic';
+
 
 // Matriz de coordenadas relativas sobre la cancha horizontal (x: % horizontal, y: % vertical)
 const FORMATION_COORDINATES = {
@@ -500,6 +501,9 @@ export const StandingsTable = ({ tournament, tournaments = [], teams, groupData 
   };
 
   const formatSlotLabel = (slotId) => {
+    if (!slotId) return 'Por definir';
+    if (slotId.startsWith('SLOT:PENDING')) return 'Cupo por definir';
+
     const parts = slotId.split(':');
     const srcId = parts[1];
     const type = parts[2];
@@ -539,11 +543,16 @@ export const StandingsTable = ({ tournament, tournaments = [], teams, groupData 
         </thead>
         <tbody className="divide-y divide-gray-100 font-bold">
           {rows.map((row, idx) => {
-            const teamId = row.id;
-            if (!teamId || teamId === 'TBD') return null;
+            const rawId = row.id;
+            if (!rawId) return null;
 
-            const isSlot = teamId.startsWith('SLOT:');
-            const team = teams.find(t => t.id === teamId);
+            const resolvedId = (rawId.startsWith('SLOT:') && typeof resolveSlotTeamId === 'function')
+              ? resolveSlotTeamId(rawId, tournaments, teams)
+              : rawId;
+
+            const isSlot = resolvedId.startsWith('SLOT:');
+            const isTbd = resolvedId === 'TBD';
+            const team = teams.find(t => t.id === resolvedId);
             const rank = idx + 1;
             const customColor = getPositionStyle(rank);
 
@@ -551,11 +560,15 @@ export const StandingsTable = ({ tournament, tournaments = [], teams, groupData 
             const pj = row.pj ?? 0;
             const dg = (row.gf ?? 0) - (row.gc ?? 0);
 
-            const displayName = isSlot ? formatSlotLabel(teamId) : (team?.name || teamId);
+            const displayName = isSlot 
+              ? formatSlotLabel(resolvedId) 
+              : isTbd 
+                ? 'Por definir' 
+                : (team?.name || resolvedId);
 
             return (
               <tr
-                key={teamId}
+                key={`${rawId}-${idx}`}
                 className="hover:bg-gray-50 bg-white transition-colors"
                 style={{
                   borderLeft: customColor ? `4px solid ${customColor}` : '4px solid transparent'
@@ -577,10 +590,14 @@ export const StandingsTable = ({ tournament, tournaments = [], teams, groupData 
                     <div className="w-6 h-6 rounded-full bg-amber-400 text-slate-950 font-black text-[10px] flex items-center justify-center shrink-0 shadow-sm">
                       📥
                     </div>
+                  ) : isTbd ? (
+                    <div className="w-6 h-6 rounded-full bg-gray-200 text-gray-500 font-black text-[10px] flex items-center justify-center shrink-0">
+                      ?
+                    </div>
                   ) : (
                     <Shield team={team} size="sm" />
                   )}
-                  <span className={`truncate max-w-[170px] ${isSlot ? 'text-amber-900 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200 text-[11px]' : 'text-gray-800'}`}>
+                  <span className={`truncate max-w-[170px] ${isSlot ? 'text-amber-900 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200 text-[11px]' : isTbd ? 'text-gray-400 italic' : 'text-gray-800'}`}>
                     {displayName}
                   </span>
                 </td>

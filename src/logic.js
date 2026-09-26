@@ -77,86 +77,6 @@ export const assignProceduralGoalScorers = (teamPlayers, lineupIds, count) => {
   return goals.sort((a, b) => a.minute - b.minute);
 };
 
-export const getGroupDetailedStandings = (tournament, teams, allTournaments = []) => {
-  const numGroups = parseInt(tournament.numGroups) || 2;
-  const rawParticipants = tournament.participants || [];
-  
-  // 1. Resolver los slots a equipos reales si ya se conocen
-  const effectiveIds = rawParticipants.map(id => {
-    if (id && id.startsWith('SLOT:')) {
-      return resolveSlotTeamId(id, allTournaments, teams);
-    }
-    return id;
-  });
-  
-  const stats = {};
-  effectiveIds.forEach(id => {
-    if (id && id !== 'TBD') {
-      stats[id] = { id, pts: 0, pj: 0, pg: 0, pe: 0, pp: 0, gf: 0, gc: 0, group: -1 };
-    }
-  });
-
-  effectiveIds.filter(id => id && id !== 'TBD').forEach((id, idx) => {
-    // Si hubo sorteo manual, buscar por el ID resuelto o por el slot original
-    const rawId = rawParticipants[idx];
-    let groupIdx = tournament.drawType === 'manual' 
-      ? (tournament.manualPlacements?.[id] ?? tournament.manualPlacements?.[rawId] ?? -1) 
-      : (idx % numGroups);
-      
-    if (groupIdx === -1) groupIdx = idx % numGroups;
-    if (stats[id]) stats[id].group = parseInt(groupIdx);
-  });
-
-  (tournament.fixtures || []).forEach(m => {
-    if (m.played && !m.isPlayoff) {
-      // Normalizar en caliente los IDs de los partidos jugados si venían de slots
-      const hId = (m.home && m.home.startsWith('SLOT:')) ? resolveSlotTeamId(m.home, allTournaments, teams) : m.home;
-      const aId = (m.away && m.away.startsWith('SLOT:')) ? resolveSlotTeamId(m.away, allTournaments, teams) : m.away;
-
-      if (stats[hId] && stats[aId]) {
-        const hs = parseInt(m.homeScore) || 0;
-        const as = parseInt(m.awayScore) || 0;
-        stats[hId].pj++; stats[aId].pj++;
-        stats[hId].gf += hs; stats[aId].gf += as;
-        stats[hId].gc += as; stats[aId].gc += hs;
-
-        if (hs > as) {
-          stats[hId].pg++; stats[aId].pp++;
-          stats[hId].pts += parseInt(tournament.winPoints) || 3;
-          stats[aId].pts += parseInt(tournament.losePoints) || 0;
-        } else if (hs < as) {
-          stats[aId].pg++; stats[hId].pp++;
-          stats[aId].pts += parseInt(tournament.winPoints) || 3;
-          stats[hId].pts += parseInt(tournament.losePoints) || 0;
-        } else {
-          stats[hId].pe++; stats[aId].pe++;
-          stats[hId].pts += parseInt(tournament.drawPoints) || 1;
-          stats[aId].pts += parseInt(tournament.drawPoints) || 1;
-        }
-      }
-    }
-  });
-
-  const sorter = (a, b) => {
-    if (b.pts !== a.pts) return b.pts - a.pts;
-    const diffA = a.gf - a.gc;
-    const diffB = b.gf - b.gc;
-    if (diffB !== diffA) return diffB - diffA;
-    return b.gf - a.gf;
-  };
-
-  const groups = Array.from({ length: numGroups }, () => []);
-  Object.values(stats).forEach(t => {
-    if (t.group >= 0 && t.group < numGroups) {
-      groups[t.group].push(t);
-    }
-  });
-  groups.forEach(g => g.sort(sorter));
-
-  return groups;
-};
-
-// Obtiene los campeones de cada ruta/subllave independiente
 export const getKnockoutPathWinners = (tournament) => {
   if (!tournament.fixtures || tournament.fixtures.length === 0) return {};
   const paths = {};
@@ -182,7 +102,7 @@ export const getKnockoutPathWinners = (tournament) => {
   return winnersByPath;
 };
 
-export const detectIncomingSlots = (targetTournamentId, allTournaments) => {
+export const detectIncomingSlots = (targetTournamentId, allTournaments = []) => {
   const detected = [];
   allTournaments.forEach(src => {
     if (src.id === targetTournamentId) return;
@@ -280,7 +200,7 @@ export const detectIncomingSlots = (targetTournamentId, allTournaments) => {
   return detected;
 };
 
-export const resolveSlotTeamId = (slotId, allTournaments, teams) => {
+export const resolveSlotTeamId = (slotId, allTournaments = [], teams = []) => {
   if (!slotId || !slotId.startsWith('SLOT:')) return slotId;
   const parts = slotId.split(':');
   const srcId = parts[1];
@@ -295,11 +215,11 @@ export const resolveSlotTeamId = (slotId, allTournaments, teams) => {
   }
 
   if (srcTournament.format === 'groups') {
-    const groups = getGroupDetailedStandings(srcTournament, teams);
+    const groups = getGroupDetailedStandings(srcTournament, teams, allTournaments);
     if (type === 'best_thirds') {
       const rankIdx = parseInt(parts[3]) - 1;
       const thirds = groups.map(g => g[2]).filter(Boolean);
-      thirds.sort((a,b) => b.pts !== a.pts ? b.pts - a.pts : (b.gf-b.gc) - (a.gf-a.gc));
+      thirds.sort((a, b) => b.pts !== a.pts ? b.pts - a.pts : (b.gf - b.gc) - (a.gf - a.gc));
       return thirds[rankIdx]?.id || slotId;
     }
     if (type === 'group_pos') {
@@ -314,33 +234,118 @@ export const resolveSlotTeamId = (slotId, allTournaments, teams) => {
   return sorted[pos - 1] || slotId;
 };
 
-export const resolveEffectiveParticipants = (tournamentId, tournaments, teams) => {
+export const resolveEffectiveParticipants = (tournamentId, tournaments = [], teams = []) => {
   const t = tournaments.find(x => x.id === tournamentId);
   if (!t) return [];
 
   const slots = detectIncomingSlots(tournamentId, tournaments);
   const currentParticipants = t.participants || [];
 
-  const combined = [...currentParticipants];
-  slots.forEach(s => {
-    if (!combined.includes(s.slotId)) {
-      const resolvedReal = resolveSlotTeamId(s.slotId, tournaments, teams);
-      if (!combined.includes(resolvedReal)) {
-        combined.push(s.slotId);
-      }
-    }
-  });
+  // Si el torneo tiene cupos entrantes configurados, la base estructural son los 32 slotIds
+  if (slots.length > 0) {
+    const slotList = slots.map(s => s.slotId);
+    // Si además tiene participantes directos asignados manualmente
+    currentParticipants.forEach(p => {
+      if (!slotList.includes(p)) slotList.push(p);
+    });
+    const limit = parseInt(t.numTeams) || slotList.length;
+    return slotList.slice(0, limit);
+  }
 
-  const finalResolved = combined.map(id => resolveSlotTeamId(id, tournaments, teams));
-  const limit = parseInt(t.numTeams) || finalResolved.length;
-  return finalResolved.slice(0, limit);
+  // Comportamiento para torneos estándar de clubes fijos
+  const limit = parseInt(t.numTeams) || currentParticipants.length;
+  const pool = [...currentParticipants];
+  while (pool.length < limit) {
+    pool.push('TBD');
+  }
+  return pool.slice(0, limit);
+};
+
+export const getGroupDetailedStandings = (tournament, teams = [], allTournaments = []) => {
+  const numGroups = parseInt(tournament.numGroups) || 2;
+  const fixtures = tournament.fixtures || [];
+
+  return Array.from({ length: numGroups }, (_, gIdx) => {
+    const groupTeamsSet = new Set();
+    fixtures.forEach(m => {
+      if (!m.isPlayoff && parseInt(m.group, 10) === gIdx) {
+        if (m.home) groupTeamsSet.add(m.home);
+        if (m.away) groupTeamsSet.add(m.away);
+      }
+    });
+
+    const teamIds = Array.from(groupTeamsSet);
+    const groupStats = {};
+
+    teamIds.forEach(rawId => {
+      const resolved = (rawId && rawId.startsWith('SLOT:'))
+        ? resolveSlotTeamId(rawId, allTournaments, teams)
+        : rawId;
+
+      groupStats[rawId] = {
+        id: resolved || rawId,
+        rawId: rawId,
+        pts: 0,
+        pj: 0,
+        pg: 0,
+        pe: 0,
+        pp: 0,
+        gf: 0,
+        gc: 0,
+        group: gIdx
+      };
+    });
+
+    fixtures.forEach(m => {
+      if (m.played && !m.isPlayoff && parseInt(m.group, 10) === gIdx) {
+        const hKey = m.home;
+        const aKey = m.away;
+
+        if (groupStats[hKey] && groupStats[aKey]) {
+          const hs = parseInt(m.homeScore, 10) || 0;
+          const as = parseInt(m.awayScore, 10) || 0;
+
+          groupStats[hKey].pj++; groupStats[aKey].pj++;
+          groupStats[hKey].gf += hs; groupStats[aKey].gf += as;
+          groupStats[hKey].gc += as; groupStats[aKey].gc += hs;
+
+          const winPts = parseInt(tournament.winPoints ?? 3, 10);
+          const drawPts = parseInt(tournament.drawPoints ?? 1, 10);
+          const losePts = parseInt(tournament.losePoints ?? 0, 10);
+
+          if (hs > as) {
+            groupStats[hKey].pg++; groupStats[aKey].pp++;
+            groupStats[hKey].pts += winPts;
+            groupStats[aKey].pts += losePts;
+          } else if (hs < as) {
+            groupStats[aKey].pg++; groupStats[hKey].pp++;
+            groupStats[aKey].pts += winPts;
+            groupStats[hKey].pts += losePts;
+          } else {
+            groupStats[hKey].pe++; groupStats[aKey].pe++;
+            groupStats[hKey].pts += drawPts;
+            groupStats[aKey].pts += drawPts;
+          }
+        }
+      }
+    });
+
+    const sorter = (a, b) => {
+      if (b.pts !== a.pts) return b.pts - a.pts;
+      const diffA = a.gf - a.gc;
+      const diffB = b.gf - b.gc;
+      if (diffB !== diffA) return diffB - diffA;
+      return b.gf - a.gf;
+    };
+
+    return Object.values(groupStats).sort(sorter);
+  });
 };
 
 export const advanceKnockout = (fixtures) => {
   if (!fixtures) return fixtures;
   let newFixtures = JSON.parse(JSON.stringify(fixtures));
   
-  // Agrupar por subcuadro/ruta
   const pathIndexes = Array.from(new Set(newFixtures.map(f => f.pathIndex ?? 0)));
 
   pathIndexes.forEach(pIdx => {
@@ -363,8 +368,8 @@ export const advanceKnockout = (fixtures) => {
           } else if (m.played) {
             const hs = (parseInt(m.homeScore) || 0) + (m.legs === 2 ? (parseInt(m.homeScore2) || 0) : 0);
             const as = (parseInt(m.awayScore) || 0) + (m.legs === 2 ? (parseInt(m.awayScore2) || 0) : 0);
-            const hp = parseInt(m.homePen) || 0;
-            const ap = parseInt(m.awayPen) || 0;
+            const hp = parseInt(finalMatchHomePen(m)) || 0;
+            const ap = parseInt(finalMatchAwayPen(m)) || 0;
 
             if (hs + hp > as + ap) winner = m.home;
             else if (as + ap > hs + hp) winner = m.away;
@@ -395,10 +400,12 @@ export const advanceKnockout = (fixtures) => {
   return newFixtures;
 };
 
+const finalMatchHomePen = (m) => m.homePen || 0;
+const finalMatchAwayPen = (m) => m.awayPen || 0;
+
 export const generateRoundRobinFixtures = (teamIds = [], legs = 1) => {
   let pool = [...teamIds];
   
-  // Si la cantidad de equipos es impar, se añade un comodín de descanso
   if (pool.length % 2 !== 0) {
     pool.push('TBD');
   }
@@ -408,13 +415,11 @@ export const generateRoundRobinFixtures = (teamIds = [], legs = 1) => {
   const matchesPerRound = n / 2;
   const matches = [];
 
-  // Algoritmo Round Robin canónico con pivote fijo en la posición 0
   for (let round = 0; round < roundsCount; round++) {
     for (let match = 0; match < matchesPerRound; match++) {
       const homeIdx = (round + match) % (n - 1);
       let awayIdx = (n - 1 - match + round) % (n - 1);
 
-      // El último elemento actúa como rival del pivote
       if (match === 0) {
         awayIdx = n - 1;
       }
@@ -422,9 +427,7 @@ export const generateRoundRobinFixtures = (teamIds = [], legs = 1) => {
       const home = pool[homeIdx];
       const away = pool[awayIdx];
 
-      // Omitir si alguno es descanso o nulo
       if (home && away && home !== 'TBD' && away !== 'TBD') {
-        // Alternar localía para equilibrar local y visitante
         const isAlternate = (round % 2 === 1 && match === 0);
         matches.push({
           id: generateId(),
@@ -441,7 +444,6 @@ export const generateRoundRobinFixtures = (teamIds = [], legs = 1) => {
     }
   }
 
-  // Generación de segunda rueda (Ida y Vuelta) si aplica
   if (legs === 2) {
     const secondLegMatches = matches.map(m => ({
       id: generateId(),
@@ -469,7 +471,6 @@ export const generateGroupPlayoffs = (tournament, groups) => {
     const topHalf = [];
     const bottomHalf = [];
 
-    // Separar los cruces alternados en dos mitades del cuadro
     for (let g = 0; g < numGroups; g += 2) {
       const g1 = groups[g] || [];
       const g2 = groups[g + 1] || groups[0] || [];
@@ -479,13 +480,10 @@ export const generateGroupPlayoffs = (tournament, groups) => {
       const firstG2 = g2[0]?.id || 'TBD';
       const secondG1 = g1[1]?.id || 'TBD';
 
-      // 1ºA vs 2ºB va a la mitad superior
       topHalf.push(firstG1, secondG2);
-      // 1ºB vs 2ºA va a la mitad inferior
       bottomHalf.push(firstG2, secondG1);
     }
 
-    // El cuadro final une primero toda la mitad superior y luego toda la mitad inferior
     seededPairs = [...topHalf, ...bottomHalf];
   } else {
     const firsts = [];
@@ -569,15 +567,35 @@ export const generateFixtures = (tournament, effectiveIds) => {
 
   if (tournament.format === 'groups') {
     const numGroups = parseInt(tournament.numGroups) || 2;
+    const capacityPerGroup = Math.max(2, Math.floor((parseInt(tournament.numTeams) || (numGroups * 4)) / numGroups));
     const groups = Array.from({ length: numGroups }, () => []);
 
-    effectiveIds.forEach((id, idx) => {
-      let groupIdx = tournament.drawType === 'manual'
-        ? (tournament.manualPlacements?.[id] ?? -1)
-        : (idx % numGroups);
-      if (groupIdx === -1) groupIdx = idx % numGroups;
-      if (groupIdx >= 0 && groupIdx < numGroups) {
-        groups[parseInt(groupIdx)].push(id);
+    const totalRequired = numGroups * capacityPerGroup;
+    let pool = [...effectiveIds];
+    let fillCount = 1;
+    while (pool.length < totalRequired) {
+      pool.push(`SLOT:PENDING:${fillCount++}`);
+    }
+    pool = pool.slice(0, totalRequired);
+
+    const unassigned = [];
+    const placements = tournament.slotPlacements || tournament.manualPlacements || {};
+
+    pool.forEach((id) => {
+      const targetG = placements[id];
+      if (targetG !== undefined && targetG >= 0 && targetG < numGroups && groups[targetG].length < capacityPerGroup) {
+        groups[targetG].push(id);
+      } else {
+        unassigned.push(id);
+      }
+    });
+
+    groups.forEach((gList, gIdx) => {
+      while (gList.length < capacityPerGroup && unassigned.length > 0) {
+        gList.push(unassigned.shift());
+      }
+      while (gList.length < capacityPerGroup) {
+        gList.push(`SLOT:PENDING:${gIdx}_${gList.length}`);
       }
     });
 
@@ -591,7 +609,6 @@ export const generateFixtures = (tournament, effectiveIds) => {
       allMatches = [...allMatches, ...gMatches];
     });
 
-    // Ordenar de modo que todos los partidos de la Fecha 1 (de todos los grupos) queden contiguos
     allMatches.sort((a, b) => {
       if (a.round !== b.round) return a.round - b.round;
       return (a.group ?? 0) - (b.group ?? 0);
@@ -618,7 +635,6 @@ export const generateFixtures = (tournament, effectiveIds) => {
 
     let allMatches = [];
 
-    // Generar cada subcuadro/ruta de forma independiente
     for (let p = 0; p < numPaths; p++) {
       const pathTeamSlice = teams.slice(p * teamsPerPath, (p + 1) * teamsPerPath);
       const participantList = [];
@@ -663,7 +679,7 @@ export const generateFixtures = (tournament, effectiveIds) => {
   return [];
 };
 
-export const calculateTournamentStandings = (tournament, tournaments, teams) => {
+export const calculateTournamentStandings = (tournament, tournaments = [], teams = []) => {
   const effectiveIds = resolveEffectiveParticipants(tournament.id, tournaments, teams);
 
   if (tournament.format === 'knockout') {
@@ -702,7 +718,7 @@ export const calculateTournamentStandings = (tournament, tournaments, teams) => 
   }
 
   if (tournament.format === 'groups') {
-    const groups = getGroupDetailedStandings(tournament, teams);
+    const groups = getGroupDetailedStandings(tournament, teams, tournaments);
     let interleaved = [];
     const maxSize = Math.max(...groups.map(g => g.length), 0);
     for (let i = 0; i < maxSize; i++) {
@@ -728,20 +744,20 @@ export const calculateTournamentStandings = (tournament, tournaments, teams) => 
 
       stats[m.home].pj++; stats[m.away].pj++;
       stats[m.home].gf += hScore; stats[m.away].gf += aScore;
-      stats[m.home].gc += aScore; stats[m.home].gc += hScore;
+      stats[m.home].gc += aScore; stats[m.away].gc += hScore;
 
       if (hScore > aScore) {
         stats[m.home].pg++; stats[m.away].pp++;
-        stats[m.home].pts += parseInt(tournament.winPoints) || 3;
-        stats[m.away].pts += parseInt(tournament.losePoints) || 0;
+        stats[m.home].pts += parseInt(tournament.winPoints ?? 3);
+        stats[m.away].pts += parseInt(tournament.losePoints ?? 0);
       } else if (hScore < aScore) {
         stats[m.away].pg++; stats[m.home].pp++;
-        stats[m.away].pts += parseInt(tournament.winPoints) || 3;
-        stats[m.home].pts += parseInt(tournament.losePoints) || 0;
+        stats[m.away].pts += parseInt(tournament.winPoints ?? 3);
+        stats[m.home].pts += parseInt(tournament.losePoints ?? 0);
       } else {
         stats[m.home].pe++; stats[m.away].pe++;
-        stats[m.home].pts += parseInt(tournament.drawPoints) || 1;
-        stats[m.away].pts += parseInt(tournament.drawPoints) || 1;
+        stats[m.home].pts += parseInt(tournament.drawPoints ?? 1);
+        stats[m.away].pts += parseInt(tournament.drawPoints ?? 1);
       }
     }
   });
