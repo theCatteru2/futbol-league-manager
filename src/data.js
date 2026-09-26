@@ -13,44 +13,294 @@ export const CONMEBOL_COUNTRIES = [
 
 export const REGIONAL_NAMES_BY_COUNTRY = {
   ARG: {
-    first: ['Mateo', 'Lucas', 'Santiago', 'Facundo', 'Julian', 'Lautaro', 'Nicolas', 'Joaquin', 'Enzo', 'Rodrigo', 'Franco', 'Agustin', 'Tomas', 'Ignacio', 'Nahuel', 'Gonzalo', 'Federico', 'Ramiro', 'Thiago', 'Bautista', 'Leandro'],
-    last: ['Gonzalez', 'Rodriguez', 'Lopez', 'Fernandez', 'Perez', 'Gomez', 'Diaz', 'Alvarez', 'Romero', 'Sosa', 'Torres', 'Benitez', 'Acosta', 'Medina', 'Herrera', 'Aguirre', 'Pereyra', 'Gutierrez', 'Gimenez', 'Molina']
+    first: [
+      'Agustín', 'Alejo', 'Alexis', 'Bautista', 'Benjamín', 'Bruno',
+      'Camilo', 'Carlos', 'Claudio', 'Damián', 'Emanuel', 'Emiliano',
+      'Facundo', 'Federico', 'Felipe', 'Franco', 'Gabriel', 'Gastón',
+      'Gonzalo', 'Guido', 'Ignacio', 'Iván', 'Joaquín', 'Julián',
+      'Lautaro', 'Leandro', 'Lucas', 'Luciano', 'Manuel', 'Marcos',
+      'Matías', 'Maximiliano', 'Nahuel', 'Nicolás', 'Pablo', 'Patricio',
+      'Ramiro', 'Renzo', 'Rodrigo', 'Santiago', 'Sebastián', 'Tomás',
+      'Valentín', 'Vicente'
+    ],
+    compoundFirst: [
+      'Juan Cruz', 'Juan Ignacio', 'Juan Manuel', 'Juan Martín',
+      'Juan Pablo', 'Juan Sebastián', 'Franco Nicolás',
+      'Lucas Matías', 'Santiago Nicolás', 'Matías Ezequiel'
+    ],
+    last: [
+      'Acosta', 'Aguirre', 'Almada', 'Alvarez', 'Aranda', 'Arias',
+      'Benítez', 'Bustos', 'Cabral', 'Cabrera', 'Cardozo', 'Castro',
+      'Coronel', 'Costa', 'Díaz', 'Domínguez', 'Fernández', 'Ferreyra',
+      'Figueroa', 'García', 'Giménez', 'Gómez', 'González', 'Gutiérrez',
+      'Herrera', 'Ibarra', 'Ledesma', 'López', 'Maldonado', 'Mansilla',
+      'Martínez', 'Medina', 'Mendoza', 'Molina', 'Morales', 'Navarro',
+      'Ojeda', 'Ortiz', 'Paredes', 'Pereyra', 'Pérez', 'Quiroga',
+      'Ramírez', 'Ríos', 'Rivero', 'Romero', 'Ruiz', 'Sánchez',
+      'Sosa', 'Suárez', 'Torres', 'Vega', 'Vera'
+    ],
+    compoundLast: [
+      'De la Cruz', 'Del Valle', 'Del Río', 'De León',
+      'De los Santos', 'González Pírez', 'Gómez Andrade',
+      'López Muñoz', 'Pérez García', 'Sánchez Miño'
+    ]
   },
+
   BRA: {
-    first: ['Gabriel', 'Lucas', 'Matheus', 'Arthur', 'Vinicius', 'Rodrigo', 'Guilherme', 'Gustavo', 'Felipe', 'Rafael', 'Bruno', 'Thiago', 'Danilo', 'Pedro', 'Everton', 'Luiz', 'Diego', 'Caio', 'Igor', 'Marcos'],
-    last: ['Silva', 'Santos', 'Oliveira', 'Souza', 'Rodrigues', 'Ferreira', 'Alves', 'Pereira', 'Lima', 'Gomes', 'Costa', 'Ribeiro', 'Martins', 'Carvalho', 'Almeida', 'Lopes', 'Soares', 'Fernandes', 'Vieira', 'Barbosa']
+    first: [
+      'Adriano', 'Alexandre', 'Anderson', 'Arthur', 'Bernardo', 'Bruno',
+      'Caio', 'Carlos', 'Cauã', 'Danilo', 'Diego', 'Douglas', 'Eduardo',
+      'Felipe', 'Fernando', 'Gabriel', 'Gerson', 'Guilherme', 'Gustavo',
+      'Henrique', 'Igor', 'João', 'Jonas', 'José', 'Juan', 'Leonardo',
+      'Lucas', 'Luiz', 'Marcos', 'Matheus', 'Murilo', 'Nathan', 'Nicolas',
+      'Otávio', 'Paulo', 'Pedro', 'Rafael', 'Renan', 'Ricardo',
+      'Rodrigo', 'Samuel', 'Thiago', 'Vinícius', 'Wesley', 'Willian'
+    ],
+    compoundFirst: [
+      'João Pedro', 'João Victor', 'João Lucas', 'João Gabriel',
+      'Luiz Henrique', 'Luiz Felipe', 'Carlos Eduardo',
+      'Pedro Henrique', 'Pedro Lucas', 'Victor Hugo',
+      'Arthur Henrique', 'Gabriel Jesus'
+    ],
+    last: [
+      'Almeida', 'Alves', 'Andrade', 'Araújo', 'Barbosa', 'Barros',
+      'Batista', 'Cardoso', 'Carvalho', 'Castro', 'Costa', 'Dias',
+      'Dantas', 'Farias', 'Fernandes', 'Ferreira', 'Freitas', 'Gomes',
+      'Lima', 'Lopes', 'Machado', 'Marques', 'Martins', 'Medeiros',
+      'Melo', 'Mendes', 'Monteiro', 'Moreira', 'Moura', 'Nascimento',
+      'Nogueira', 'Oliveira', 'Pereira', 'Pinto', 'Ramos', 'Ribeiro',
+      'Rocha', 'Rodrigues', 'Santos', 'Silva', 'Soares', 'Souza',
+      'Teixeira', 'Vieira'
+    ],
+    compoundLast: [
+      'da Silva', 'da Costa', 'de Souza', 'de Oliveira',
+      'dos Santos', 'dos Reis', 'da Rocha', 'de Almeida',
+      'Ferreira da Silva', 'Pereira dos Santos'
+    ]
   },
+
   URU: {
-    first: ['Sebastian', 'Diego', 'Federico', 'Gaston', 'Maximiliano', 'Matias', 'Nicolas', 'Emiliano', 'Agustin', 'Facundo', 'Rodrigo', 'Nahuel', 'Santiago', 'Franco', 'Lucas'],
-    last: ['Rodriguez', 'Gonzalez', 'Hernandez', 'Suarez', 'Cavani', 'Godin', 'Valverde', 'Bentancur', 'Caceres', 'Coates', 'Gimenez', 'Olivera', 'De La Cruz', 'Torres']
+    first: [
+      'Agustín', 'Alejandro', 'Alexis', 'Bruno', 'Camilo', 'Christian',
+      'Cristian', 'Damián', 'Diego', 'Emiliano', 'Facundo', 'Federico',
+      'Felipe', 'Franco', 'Gabriel', 'Gaston', 'Gonzalo', 'Ignacio',
+      'Joaquín', 'Juan', 'Leandro', 'Lucas', 'Manuel', 'Martín',
+      'Matías', 'Maximiliano', 'Nicolás', 'Pablo', 'Rodrigo',
+      'Santiago', 'Sebastián', 'Thiago', 'Tomás'
+    ],
+    compoundFirst: [
+      'Juan Martín', 'Juan Manuel', 'Juan Ignacio', 'Juan Cruz',
+      'Matías Nicolás', 'Franco Sebastián', 'Lucas Matías'
+    ],
+    last: [
+      'Acosta', 'Alvarez', 'Arias', 'Barrios', 'Bentancur', 'Bueno',
+      'Cabrera', 'Cáceres', 'Castro', 'Correa', 'Díaz', 'Fernández',
+      'Ferreira', 'García', 'Giménez', 'González', 'Hernández',
+      'López', 'Martínez', 'Méndez', 'Molina', 'Morales', 'Olivera',
+      'Pereira', 'Pérez', 'Rodríguez', 'Romero', 'Rossi', 'Sánchez',
+      'Silva', 'Suárez', 'Tejera', 'Torres', 'Viera'
+    ],
+    compoundLast: [
+      'De los Santos', 'De León', 'Del Río', 'De Souza',
+      'González Rodríguez', 'Fernández Silva', 'Martínez Pérez'
+    ]
   },
+
   COL: {
-    first: ['James', 'Radamel', 'Luis', 'Juan', 'Carlos', 'Yerry', 'Davinson', 'Wilmar', 'Mateus', 'Jhon', 'Duvan', 'Rafael', 'Javier', 'Camilo', 'Kevin'],
-    last: ['Rodriguez', 'Diaz', 'Cuadrado', 'Falcao', 'Mina', 'Sanchez', 'Barrios', 'Uribe', 'Arias', 'Borre', 'Zapata', 'Castillo', 'Muriel', 'Mojica']
+    first: [
+      'Andrés', 'Angelo', 'Brayan', 'Camilo', 'Carlos', 'Cristian',
+      'Daniel', 'David', 'Diego', 'Edwin', 'Eduardo', 'Esteban',
+      'Felipe', 'Freddy', 'Harold', 'Jhon', 'Johan', 'Juan',
+      'Kevin', 'Luis', 'Mateo', 'Mauricio', 'Miguel', 'Nelson',
+      'Nicolás', 'Óscar', 'Rafael', 'Ricardo', 'Santiago', 'Sebastián',
+      'Wilmar', 'Yerson'
+    ],
+    compoundFirst: [
+      'Juan David', 'Juan Camilo', 'Juan José', 'Juan Sebastián',
+      'Luis Miguel', 'José Manuel', 'Andrés Felipe',
+      'Carlos Andrés', 'Miguel Ángel'
+    ],
+    last: [
+      'Agudelo', 'Arango', 'Arias', 'Borrero', 'Cabrera', 'Cárdenas',
+      'Castillo', 'Córdoba', 'Díaz', 'Escobar', 'García', 'Gómez',
+      'González', 'Guerrero', 'Hernández', 'Londoño', 'López',
+      'Martínez', 'Medina', 'Mendoza', 'Mina', 'Moreno', 'Mosquera',
+      'Moya', 'Murillo', 'Navarro', 'Ospina', 'Palacios', 'Pardo',
+      'Pérez', 'Ramírez', 'Ramos', 'Restrepo', 'Ríos', 'Rodríguez',
+      'Rojas', 'Sánchez', 'Suárez', 'Torres', 'Valencia', 'Vargas',
+      'Vásquez', 'Zapata'
+    ],
+    compoundLast: [
+      'De la Hoz', 'Del Castillo', 'De los Santos',
+      'Gómez Rodríguez', 'Pérez García', 'Rojas Martínez',
+      'Sánchez Torres'
+    ]
   },
+
   CHI: {
-    first: ['Alexis', 'Arturo', 'Gary', 'Claudio', 'Eduardo', 'Charles', 'Mauricio', 'Erick', 'Ben', 'Marcelino', 'Guillermo', 'Paulo', 'Gabriel', 'Vicente'],
-    last: ['Sanchez', 'Vidal', 'Medel', 'Bravo', 'Vargas', 'Aranguiz', 'Isla', 'Pulgar', 'Brereton', 'Nunez', 'Maripan', 'Diaz', 'Suazo', 'Valdes']
+    first: [
+      'Agustín', 'Alexis', 'Andrés', 'Benjamín', 'Brayan', 'Bruno',
+      'Camilo', 'Carlos', 'Cristóbal', 'Diego', 'Eduardo', 'Elías',
+      'Emiliano', 'Esteban', 'Felipe', 'Franco', 'Gabriel', 'Gonzalo',
+      'Ignacio', 'Joaquín', 'Jorge', 'José', 'Lucas', 'Matías',
+      'Maximiliano', 'Nicolás', 'Pablo', 'Patricio', 'Sebastián',
+      'Vicente'
+    ],
+    compoundFirst: [
+      'Juan Pablo', 'Juan Ignacio', 'Juan José',
+      'Diego Ignacio', 'José Ignacio', 'Matías Nicolás'
+    ],
+    last: [
+      'Alarcón', 'Aránguiz', 'Aravena', 'Bustos', 'Cáceres', 'Campos',
+      'Cañete', 'Carrasco', 'Castillo', 'Contreras', 'Cornejo', 'Cortés',
+      'Díaz', 'Espinoza', 'Fernández', 'Fuentes', 'Galdames', 'García',
+      'González', 'Gutiérrez', 'Herrera', 'Hernández', 'Lagos', 'Leiva',
+      'López', 'Marín', 'Martínez', 'Medina', 'Méndez', 'Morales',
+      'Muñoz', 'Navarro', 'Núñez', 'Paredes', 'Pérez', 'Ramírez',
+      'Reyes', 'Rojas', 'Salazar', 'Sánchez', 'Sepúlveda', 'Soto',
+      'Suazo', 'Tapia', 'Valdés', 'Vargas', 'Vera', 'Vidal'
+    ],
+    compoundLast: [
+      'De la Fuente', 'Del Pino', 'De la Cruz',
+      'González Pizarro', 'Sánchez Rojas', 'Pérez Muñoz'
+    ]
   },
+
   PAR: {
-    first: ['Gustavo', 'Junior', 'Miguel', 'Angel', 'Derlis', 'Richard', 'Mathias', 'Alejandro', 'Diego', 'Julio', 'Fabian', 'Lorenzo', 'Robert', 'Braian'],
-    last: ['Gomez', 'Alonso', 'Almiron', 'Romero', 'Gonzalez', 'Sanchez', 'Villasanti', 'Gamarra', 'Balbuena', 'Enciso', 'Bareiro', 'Rojas', 'Cardozo']
+    first: [
+      'Adrián', 'Alejandro', 'Ángel', 'Antonio', 'Blas', 'Brian',
+      'Carlos', 'César', 'Cristian', 'Derlis', 'Diego', 'Edgar',
+      'Enrique', 'Fabián', 'Federico', 'Fernando', 'Francisco',
+      'Gustavo', 'Hernán', 'Iván', 'Javier', 'Jorge', 'José',
+      'Juan', 'Julio', 'Matías', 'Miguel', 'Óscar', 'Pablo',
+      'Pedro', 'Richard', 'Rodrigo', 'Santiago'
+    ],
+    compoundFirst: [
+      'Juan Carlos', 'Juan Manuel', 'Juan Ángel',
+      'José Antonio', 'Miguel Ángel', 'Carlos Javier'
+    ],
+    last: [
+      'Acosta', 'Alcaraz', 'Alonso', 'Ayala', 'Benítez', 'Bobadilla',
+      'Cáceres', 'Cardozo', 'Cano', 'Cañete', 'Centurión', 'Coronel',
+      'Duarte', 'Escobar', 'Espínola', 'Fernández', 'Franco',
+      'Gamarra', 'García', 'Gómez', 'González', 'Giménez', 'Lezcano',
+      'López', 'Martínez', 'Mendoza', 'Ortiz', 'Paredes', 'Pereira',
+      'Piris', 'Ramírez', 'Ríos', 'Riveros', 'Rojas', 'Romero',
+      'Sánchez', 'Silva', 'Vera', 'Villasanti'
+    ],
+    compoundLast: [
+      'Benítez López', 'González Vera', 'Martínez Rojas',
+      'Pérez Giménez', 'De los Santos', 'Del Valle'
+    ]
   },
+
   ECU: {
-    first: ['Enner', 'Moises', 'Piero', 'Pervis', 'Felix', 'Angelo', 'Gonzalo', 'Alan', 'Carlos', 'Hernan', 'Jordy', 'Jhegson', 'Jose', 'Kevin'],
-    last: ['Valencia', 'Caicedo', 'Hincapie', 'Estupiñan', 'Torres', 'Preciado', 'Plata', 'Franco', 'Gruezo', 'Mena', 'Rodriguez', 'Cifuentes', 'Arboleda']
+    first: [
+      'Adrián', 'Alan', 'Ángel', 'Angelo', 'Bryan', 'Carlos',
+      'Christian', 'Cristian', 'Darwin', 'Diego', 'Edwin', 'Edison',
+      'Enner', 'Erick', 'Felipe', 'Fernando', 'Gonzalo', 'Héctor',
+      'Janner', 'Jhegson', 'Jhon', 'Jhojan', 'José', 'Kevin',
+      'Leonardo', 'Luis', 'Moisés', 'Pervis', 'Piero', 'Richard',
+      'Roberto', 'Santiago', 'Sebastián', 'Washington'
+    ],
+    compoundFirst: [
+      'Juan José', 'Juan Carlos', 'Luis Fernando',
+      'José Andrés', 'Carlos Andrés', 'Miguel Ángel'
+    ],
+    last: [
+      'Angulo', 'Arboleda', 'Caicedo', 'Cedeño', 'Chávez', 'Cifuentes',
+      'Cornejo', 'Delgado', 'Estupiñán', 'Franco', 'García', 'Gruezo',
+      'Guerrero', 'Hincapié', 'Loor', 'López', 'Mena', 'Minda',
+      'Montaño', 'Moreno', 'Ortiz', 'Palacios', 'Paredes', 'Plata',
+      'Preciado', 'Ramírez', 'Rodríguez', 'Sánchez', 'Sarmiento',
+      'Sornoza', 'Torres', 'Valencia', 'Vera', 'Villacís', 'Zambrano'
+    ],
+    compoundLast: [
+      'De Jesús', 'Delgado Vera', 'García Caicedo',
+      'López Andrade', 'Pérez Cedeño', 'Rodríguez Mina'
+    ]
   },
+
   PER: {
-    first: ['Paolo', 'Pedro', 'Luis', 'Renato', 'Andre', 'Christian', 'Yoshimar', 'Edison', 'Gianluca', 'Alexander', 'Carlos', 'Sergio', 'Marcos'],
-    last: ['Guerrero', 'Gallese', 'Advincula', 'Tapia', 'Carrillo', 'Cueva', 'Yotun', 'Flores', 'Lapadula', 'Callens', 'Zambrano', 'Pena', 'Lopez']
+    first: [
+      'Adrián', 'Alexander', 'Álvaro', 'Anderson', 'André', 'Brayan',
+      'Carlos', 'Christian', 'Cristian', 'Diego', 'Edwin', 'Edison',
+      'Erick', 'Franco', 'Gianluca', 'Hernán', 'Jefferson', 'Jesús',
+      'Jorge', 'José', 'Juan', 'Luis', 'Manuel', 'Marcos', 'Martín',
+      'Miguel', 'Nicolás', 'Pedro', 'Renato', 'Rodrigo', 'Santiago',
+      'Sergio', 'Sebastián', 'Yoshimar'
+    ],
+    compoundFirst: [
+      'Juan Diego', 'Juan Carlos', 'José Manuel',
+      'Luis Enrique', 'Miguel Ángel', 'Carlos André'
+    ],
+    last: [
+      'Álvarez', 'Araujo', 'Cabrera', 'Cáceda', 'Cano', 'Carrillo',
+      'Castillo', 'Cueva', 'Díaz', 'Flores', 'García', 'Gonzales',
+      'Guerrero', 'López', 'Luna', 'Mendoza', 'Morales', 'Navarro',
+      'Pacheco', 'Palacios', 'Paredes', 'Peña', 'Pérez', 'Quispe',
+      'Ramírez', 'Reyes', 'Ríos', 'Rodríguez', 'Sánchez', 'Soto',
+      'Tapia', 'Torres', 'Vargas', 'Vásquez', 'Zambrano'
+    ],
+    compoundLast: [
+      'De la Cruz', 'Delgado Flores', 'García Paredes',
+      'López Torres', 'Pérez Quispe', 'Sánchez Ríos'
+    ]
   },
+
   BOL: {
-    first: ['Marcelo', 'Carlos', 'Ramiro', 'Henry', 'Leonel', 'Roberto', 'Adrian', 'Moises', 'Erwin', 'Guillermo', 'Jairo', 'Boris', 'Diego'],
-    last: ['Martins', 'Lampe', 'Vaca', 'Justiniano', 'Fernandez', 'Jusino', 'Chumacero', 'Algaranaz', 'Saavedra', 'Viscarra', 'Villamil', 'Cespedes']
+    first: [
+      'Adrián', 'Alejandro', 'Brayan', 'Carlos', 'Diego', 'Edgar',
+      'Erick', 'Fernando', 'Franz', 'Gabriel', 'Gilbert', 'Guillermo',
+      'Henry', 'Hugo', 'Jaime', 'Jair', 'Jairo', 'José', 'Juan',
+      'Luis', 'Marcelo', 'Mauricio', 'Miguel', 'Moises', 'Ramiro',
+      'René', 'Rodrigo', 'Ronald', 'Sergio', 'Víctor', 'Wilstermann'
+    ],
+    compoundFirst: [
+      'Juan Carlos', 'Juan Pablo', 'José Luis',
+      'Luis Fernando', 'Carlos Andrés', 'Miguel Ángel'
+    ],
+    last: [
+      'Alanes', 'Alarcón', 'Alvarez', 'Arce', 'Bustos', 'Cabrera',
+      'Callejas', 'Calvo', 'Castillo', 'Céspedes', 'Condori',
+      'Fernández', 'Flores', 'García', 'Gutiérrez', 'Justiniano',
+      'Lampe', 'Mamani', 'Méndez', 'Molina', 'Morales', 'Paredes',
+      'Quispe', 'Ramos', 'Rodríguez', 'Rojas', 'Saavedra', 'Salvatierra',
+      'Sánchez', 'Suárez', 'Torrez', 'Vaca', 'Valencia', 'Vargas',
+      'Villamil', 'Zeballos'
+    ],
+    compoundLast: [
+      'De la Cruz', 'Delgadillo Flores', 'Fernández Quispe',
+      'García Mamani', 'Mendoza Condori', 'Rojas Vargas'
+    ]
   },
+
   VEN: {
-    first: ['Salomon', 'Tomas', 'Yangel', 'Darwin', 'Yeferson', 'Romulo', 'Wuilker', 'Nahuel', 'Jhon', 'Cristian', 'Alexander', 'Jose', 'Eduard'],
-    last: ['Rondon', 'Rincon', 'Herrera', 'Machis', 'Soteldo', 'Otero', 'Farinez', 'Chancellor', 'Casseres', 'Navarro', 'Angel', 'Bello', 'Cordova']
+    first: [
+      'Alexander', 'Anderson', 'Ángel', 'Brayan', 'Carlos', 'Christian',
+      'Cristian', 'Darwin', 'Eduardo', 'Eduard', 'Erick', 'Fernando',
+      'Francisco', 'Gabriel', 'Jhon', 'Jhonny', 'José', 'Juan',
+      'Luis', 'Manuel', 'Miguel', 'Nahuel', 'Rafael', 'Ricardo',
+      'Roberto', 'Rómulo', 'Salomón', 'Samuel', 'Santiago', 'Tomás',
+      'Yangel', 'Yeferson', 'Wuilker'
+    ],
+    compoundFirst: [
+      'Juan Carlos', 'Juan Pablo', 'José Manuel',
+      'Luis Ángel', 'Miguel Ángel', 'Carlos Eduardo'
+    ],
+    last: [
+      'Acuña', 'Álvarez', 'Bello', 'Blanco', 'Cabrera', 'Cáceres',
+      'Casseres', 'Castillo', 'Chancellor', 'Córdova', 'Díaz',
+      'Farfán', 'Fernández', 'Flores', 'García', 'González',
+      'Gómez', 'Guerra', 'Herrera', 'López', 'Machís', 'Maldonado',
+      'Martínez', 'Méndez', 'Moreno', 'Navarro', 'Otero', 'Pereira',
+      'Ramírez', 'Rincón', 'Rivas', 'Rodríguez', 'Rondón', 'Rojas',
+      'Sánchez', 'Soteldo', 'Suárez', 'Torres', 'Vargas', 'Vera'
+    ],
+    compoundLast: [
+      'De Jesús', 'Del Valle', 'De la Cruz',
+      'González Rodríguez', 'Martínez Rivas', 'Pérez Hernández'
+    ]
   }
 };
 
@@ -64,11 +314,48 @@ export const TACTICAL_FORMATIONS = {
 
 export const generateId = () => Math.random().toString(36).substring(2, 11);
 
-export const generateRegionalName = (country = 'ARG') => {
+const randomItem = (array) => {
+  return array[Math.floor(Math.random() * array.length)];
+};
+
+const chance = (probability) => {
+  return Math.random() < probability;
+};
+
+const buildNameCandidate = (country = 'ARG') => {
   const pool = REGIONAL_NAMES_BY_COUNTRY[country] || REGIONAL_NAMES_BY_COUNTRY.ARG;
-  const first = pool.first[Math.floor(Math.random() * pool.first.length)];
-  const last = pool.last[Math.floor(Math.random() * pool.last.length)];
+
+  const first = chance(0.18) && pool.compoundFirst?.length > 0
+    ? randomItem(pool.compoundFirst)
+    : randomItem(pool.first);
+
+  const last = chance(0.15) && pool.compoundLast?.length > 0
+    ? randomItem(pool.compoundLast)
+    : randomItem(pool.last);
+
   return `${first} ${last}`;
+};
+
+export const generateRegionalName = (country = 'ARG', usedNames = null) => {
+  const used = usedNames || new Set();
+
+  for (let attempt = 0; attempt < 100; attempt++) {
+    const candidate = buildNameCandidate(country);
+    if (!used.has(candidate)) {
+      used.add(candidate);
+      return candidate;
+    }
+  }
+
+  let suffix = 2;
+  let fallback = buildNameCandidate(country);
+  while (used.has(fallback)) {
+    fallback = `${buildNameCandidate(country)} ${suffix}`;
+    suffix++;
+  }
+
+  used.add(fallback);
+  return fallback;
 };
 
 export const createProceduralRoster = (country = 'ARG') => {
@@ -78,9 +365,12 @@ export const createProceduralRoster = (country = 'ARG') => {
     'MED', 'MED', 'MED', 'MED', 'MED', 'MED',
     'DEL', 'DEL', 'DEL', 'DEL'
   ];
+
+  const usedNames = new Set();
+
   return structure.map(pos => ({
     id: generateId(),
-    name: generateRegionalName(country),
+    name: generateRegionalName(country, usedNames),
     pos
   }));
 };
@@ -107,6 +397,17 @@ const DEFAULT_ROSTERS = {
     { name: 'Manuel Lanzini', pos: 'MED' }, { name: 'Claudio Echeverri', pos: 'MED' },
     { name: 'Miguel Borja', pos: 'DEL' }, { name: 'Facundo Colidio', pos: 'DEL' },
     { name: 'Pablo Solari', pos: 'DEL' }, { name: 'Adam Bareiro', pos: 'DEL' }
+  ],
+  'Estudiantes de La Plata': [
+    { name: 'Fabricio Iacovich', pos: 'ARQ' }, { name: 'Fernando Muslera', pos: 'ARQ' },
+    { name: 'Santiago Núñez', pos: 'DEF' }, { name: 'Gastón Benedetti', pos: 'DEF' },
+    { name: 'Luciano Lollo', pos: 'DEF' }, { name: 'Eros Mancuso', pos: 'DEF' },
+    { name: 'Federico Fernández', pos: 'DEF' }, { name: 'Facundo Rodríguez', pos: 'DEF' },
+    { name: 'José Sosa', pos: 'MED' }, { name: 'Gabriel Neves', pos: 'MED' },
+    { name: 'Enzo Pérez', pos: 'MED' }, { name: 'Santiago Ascacíbar', pos: 'MED' },
+    { name: 'Tiago Palacios', pos: 'MED' }, { name: 'Alexis Manyoma', pos: 'MED' },
+    { name: 'Guido Carrillo', pos: 'DEL' }, { name: 'Lucas Alario', pos: 'DEL' },
+    { name: 'Edwuin Cetré', pos: 'DEL' }, { name: 'Luciano Giménez', pos: 'DEL' }
   ],
   'Flamengo': [
     { name: 'Agustin Rossi', pos: 'ARQ' }, { name: 'Matheus Cunha', pos: 'ARQ' },
@@ -195,6 +496,17 @@ const DEFAULT_ROSTERS = {
     { name: 'Carlos Palacios', pos: 'MED' }, { name: 'Gonzalo Castellani', pos: 'MED' },
     { name: 'Javier Correa', pos: 'DEL' }, { name: 'Guillermo Paiva', pos: 'DEL' },
     { name: 'Marcos Bolados', pos: 'DEL' }, { name: 'Lucas Cepeda', pos: 'DEL' }
+  ],
+  'Cerro Porteño': [
+    { name: 'Manuel Roffo', pos: 'ARQ' }, { name: 'Jean Fernandes', pos: 'ARQ' },
+    { name: 'Alan Benítez', pos: 'DEF' }, { name: 'Diego León', pos: 'DEF' },
+    { name: 'Brian Luciatti', pos: 'DEF' }, { name: 'Javier Báez', pos: 'DEF' },
+    { name: 'Eduardo Brock', pos: 'DEF' }, { name: 'Víctor Cabañas', pos: 'DEF' },
+    { name: 'Jorge Morel', pos: 'MED' }, { name: 'Robert Piris da Motta', pos: 'MED' },
+    { name: 'Federico Carrizo', pos: 'MED' }, { name: 'Alexis Fariña', pos: 'MED' },
+    { name: 'Gabriel Aguayo', pos: 'MED' }, { name: 'Enzo Giménez', pos: 'MED' },
+    { name: 'Cecilio Domínguez', pos: 'DEL' }, { name: 'Pablo Vegetti', pos: 'DEL' },
+    { name: 'Juan Manuel Iturbe', pos: 'DEL' }, { name: 'Diego Churín', pos: 'DEL' }
   ],
   'Olimpia': [
     { name: 'Gaston Olveira', pos: 'ARQ' }, { name: 'Rodrigo Frutos', pos: 'ARQ' },

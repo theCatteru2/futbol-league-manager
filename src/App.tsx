@@ -1,37 +1,49 @@
 // @ts-nocheck
 import React, { useState, useEffect, useRef } from 'react';
-import { PREDEFINED_TEAMS } from './data';
-import { resolveEffectiveParticipants } from './logic';
+import { PREDEFINED_TEAMS, CONMEBOL_COUNTRIES } from './data';
+import { resolveEffectiveParticipants, generateFixtures } from './logic';
 import { Card, Button } from './components/ui';
-import { TeamManager, Dashboard, TournamentForm, PlayView } from './components/views';
+import { TeamManager, Dashboard, TournamentForm, PlayView, FederationView } from './components/views';
 
-// Incrementa este número cuando realices cambios estructurales en data.js
-const DATA_VERSION = 1;
-const STORAGE_PREFIX = 'fulbo-manager-conmebol';
+const DATA_VERSION = 5;
+const STORAGE_PREFIX = 'futbol-league-manager';
 
 export default function App() {
+  const [countries, setCountries] = useState<any[]>(() => {
+    try {
+      const saved = localStorage.getItem(`${STORAGE_PREFIX}-countries`);
+      return saved ? JSON.parse(saved) : CONMEBOL_COUNTRIES;
+    } catch {
+      return CONMEBOL_COUNTRIES;
+    }
+  });
+
+  const [federations, setFederations] = useState<any[]>(() => {
+    try {
+      const saved = localStorage.getItem(`${STORAGE_PREFIX}-federations`);
+      return saved ? JSON.parse(saved) : [
+        { id: 'fed-1', name: 'CONMEBOL', tournamentIds: [] }
+      ];
+    } catch {
+      return [{ id: 'fed-1', name: 'CONMEBOL', tournamentIds: [] }];
+    }
+  });
+
   const [teams, setTeams] = useState<any[]>(() => {
     try {
       const currentVersion = Number(localStorage.getItem(`${STORAGE_PREFIX}-version`));
       const savedTeams = localStorage.getItem(`${STORAGE_PREFIX}-teams`);
 
-      // Si no hay datos guardados o la versión en el navegador es anterior a DATA_VERSION
       if (!savedTeams || currentVersion < DATA_VERSION) {
         const parsedOld = savedTeams ? JSON.parse(savedTeams) : [];
-
-        // Preservar clubes personalizados creados por el usuario
         const customTeams = parsedOld.filter(
           (oldT: any) => !PREDEFINED_TEAMS.some(pt => pt.name.toLowerCase() === oldT.name.toLowerCase())
         );
-
-        // Fusionar base oficial actualizada con equipos del usuario
         const merged = [...PREDEFINED_TEAMS, ...customTeams];
-
         localStorage.setItem(`${STORAGE_PREFIX}-teams`, JSON.stringify(merged));
         localStorage.setItem(`${STORAGE_PREFIX}-version`, String(DATA_VERSION));
         return merged;
       }
-
       return JSON.parse(savedTeams);
     } catch {
       return PREDEFINED_TEAMS;
@@ -49,6 +61,8 @@ export default function App() {
 
   const [view, setView] = useState<string>('main-menu');
   const [activeTournamentId, setActiveTournamentId] = useState<string | null>(null);
+  const [activeFederationId, setActiveFederationId] = useState<string | null>(null);
+  const [confirmResetAll, setConfirmResetAll] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -64,13 +78,51 @@ export default function App() {
     } catch {}
   }, [tournaments]);
 
+  useEffect(() => {
+    try {
+      localStorage.setItem(`${STORAGE_PREFIX}-countries`, JSON.stringify(countries));
+    } catch {}
+  }, [countries]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(`${STORAGE_PREFIX}-federations`, JSON.stringify(federations));
+    } catch {}
+  }, [federations]);
+
+  const resetSingleTournament = (tourneyId: string) => {
+    setTournaments(tournaments.map(t => {
+      if (t.id === tourneyId) {
+        const eff = resolveEffectiveParticipants(t.id, tournaments, teams);
+        return {
+          ...t,
+          status: 'started',
+          fixtures: generateFixtures(t, eff.length > 0 ? eff : (t.participants || []))
+        };
+      }
+      return t;
+    }));
+  };
+
+  const resetAllTournaments = () => {
+    setTournaments(tournaments.map(t => {
+      const eff = resolveEffectiveParticipants(t.id, tournaments, teams);
+      return {
+        ...t,
+        status: 'started',
+        fixtures: generateFixtures(t, eff.length > 0 ? eff : (t.participants || []))
+      };
+    }));
+    setConfirmResetAll(false);
+  };
+
   const exportData = () => {
-    const data = JSON.stringify({ teams, tournaments, version: DATA_VERSION }, null, 2);
+    const data = JSON.stringify({ teams, tournaments, countries, federations, version: DATA_VERSION }, null, 2);
     const blob = new Blob([data], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `fulbo-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = `fulbo-pro-backup-${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
   };
 
@@ -85,6 +137,8 @@ export default function App() {
         const parsed = JSON.parse(content);
         if (parsed.teams) setTeams(parsed.teams);
         if (parsed.tournaments) setTournaments(parsed.tournaments);
+        if (parsed.countries) setCountries(parsed.countries);
+        if (parsed.federations) setFederations(parsed.federations);
         alert("Datos importados con éxito.");
       } catch {
         alert("Error al procesar el archivo JSON.");
@@ -96,14 +150,23 @@ export default function App() {
   return (
     <div className="min-h-screen bg-gray-100 text-gray-800 font-sans select-none">
       {view === 'main-menu' && (
-        <div className="flex flex-col items-center justify-center min-h-[90vh] space-y-6 animate-fade-in p-5">
-          <div className="text-center mb-4">
+        <div className="flex flex-col items-center justify-center min-h-[90vh] space-y-5 animate-fade-in p-5">
+          <div className="text-center mb-2">
             <h1 className="text-4xl font-black text-green-800 mb-2 tracking-tight">Creador de Ligas Fulbo Pro</h1>
             <p className="text-gray-600 font-bold text-xs bg-white/70 px-4 py-1 rounded-full border border-gray-200 inline-block shadow-sm">
-              Gestor Sudamericano CONMEBOL • Pizarras Tácticas • Simulación
+              Gestor De Ligas • Federaciones y Divisiones • Simulación
             </p>
           </div>
           <div className="w-full max-w-sm space-y-3">
+            {/*
+            <button
+              onClick={() => setView('federations')}
+              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl p-4 flex flex-col items-center justify-center shadow-lg transition-transform hover:scale-105 cursor-pointer border border-emerald-500"
+            >
+              <span className="text-lg font-black">🏛️ Federaciones y Sistemas</span>
+            </button>
+            */}
+
             <button
               onClick={() => setView('dashboard')}
               className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-2xl p-4 flex flex-col items-center justify-center shadow-lg transition-transform hover:scale-105 cursor-pointer border border-blue-500"
@@ -115,7 +178,7 @@ export default function App() {
               onClick={() => setView('team-manager')}
               className="w-full bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl p-4 flex flex-col items-center justify-center shadow-lg transition-transform hover:scale-105 cursor-pointer border border-indigo-500"
             >
-              <span className="text-lg font-black">👥 Planteles y Equipos</span>
+              <span className="text-lg font-black">👥 Planteles, Clubes y Países</span>
             </button>
 
             <button
@@ -125,7 +188,14 @@ export default function App() {
               <span className="text-lg font-black">⚽ Jugar Torneos</span>
             </button>
 
-            <div className="pt-4 flex space-x-2">
+            <button
+              onClick={() => setConfirmResetAll(true)}
+              className="w-full bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-xl p-2.5 font-bold text-xs border border-rose-200 flex items-center justify-center space-x-1.5 transition-colors cursor-pointer"
+            >
+              <span>🔄</span> <span>Reiniciar Todos los Torneos</span>
+            </button>
+
+            <div className="pt-2 flex space-x-2">
               <button
                 onClick={exportData}
                 className="flex-1 bg-white border border-gray-300 text-gray-700 font-bold p-2.5 rounded-xl text-xs hover:bg-gray-50 flex items-center justify-center space-x-1 shadow-sm cursor-pointer"
@@ -144,10 +214,37 @@ export default function App() {
         </div>
       )}
 
+      {confirmResetAll && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-red-200 text-center animate-slide-up">
+            <h3 className="text-lg font-black text-gray-900 mb-2">¿Reiniciar TODOS los Torneos?</h3>
+            <p className="text-xs text-gray-500 mb-5 font-bold">
+              Se borrarán todos los resultados y fixtures disputados, regenerando el estado inicial de cada competencia.
+            </p>
+            <div className="flex justify-center space-x-2">
+              <Button variant="secondary" onClick={() => setConfirmResetAll(false)}>Cancelar</Button>
+              <Button variant="danger" onClick={resetAllTournaments}>Confirmar Reinicio</Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {view === 'federations' && (
+        <FederationView
+          federations={federations}
+          tournaments={tournaments}
+          updateFederations={setFederations}
+          setView={setView}
+          setActiveTournamentId={setActiveTournamentId}
+        />
+      )}
+
       {view === 'team-manager' && (
         <TeamManager
           teams={teams}
+          countries={countries}
           updateTeams={setTeams}
+          updateCountries={setCountries}
           setView={setView}
         />
       )}
@@ -159,6 +256,7 @@ export default function App() {
           updateTournaments={setTournaments}
           setView={setView}
           setActiveTournamentId={setActiveTournamentId}
+          onResetTournament={resetSingleTournament}
         />
       )}
 
@@ -167,6 +265,7 @@ export default function App() {
           view={view}
           tournaments={tournaments}
           teams={teams}
+          countries={countries}
           updateTournaments={setTournaments}
           activeTournamentId={activeTournamentId}
           setView={setView}
@@ -225,6 +324,7 @@ export default function App() {
           updateTournaments={setTournaments}
           activeTournamentId={activeTournamentId}
           setView={setView}
+          onResetTournament={resetSingleTournament}
         />
       )}
     </div>

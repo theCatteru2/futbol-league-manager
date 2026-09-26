@@ -461,13 +461,69 @@ export const MatchDetailModal = ({ match, tournament, teams, onClose, onSaveMatc
   );
 };
 
-export const StandingsTable = ({ tournament, teams, groupTeamIds, isGroups = false, gIdx = 0 }) => {
-  // Función para determinar el color de la fila según las reglas de entrelazado
+export const StandingsTable = ({ tournament, tournaments = [], teams, groupData = [], groupTeamIds = [], isGroups = false, gIdx = 0 }) => {
   const getPositionStyle = (rank) => {
-    const qual = (tournament.qualifications || []).find(q => rank >= q.startPos && rank <= q.endPos);
-    if (!qual) return null;
-    return qual.color || '#10b981';
+    const quals = tournament.qualifications || [];
+
+    if (isGroups) {
+      const groupMatch = quals.find(q => {
+        if (q.type === 'group_pos') {
+          return parseInt(q.groupSpecific) === gIdx && parseInt(q.groupPos) === rank;
+        }
+        if (q.type === 'best_thirds' && rank === 3) {
+          return true;
+        }
+        return false;
+      });
+
+      if (groupMatch) return groupMatch.color || '#10b981';
+
+      const rangeMatch = quals.find(q => {
+        if (q.type && q.type !== 'range') return false;
+        const s = parseInt(q.startPos) || 1;
+        const e = parseInt(q.endPos) || s;
+        return rank >= s && rank <= e;
+      });
+
+      if (rangeMatch) return rangeMatch.color || '#10b981';
+      return null;
+    }
+
+    const rangeMatch = quals.find(q => {
+      const s = parseInt(q.startPos) || 1;
+      const e = parseInt(q.endPos) || s;
+      return rank >= s && rank <= e;
+    });
+
+    if (rangeMatch) return rangeMatch.color || '#10b981';
+    return null;
   };
+
+  const formatSlotLabel = (slotId) => {
+    const parts = slotId.split(':');
+    const srcId = parts[1];
+    const type = parts[2];
+    const srcT = (tournaments || []).find(t => t.id === srcId);
+    const srcName = srcT ? srcT.name : 'Torneo';
+
+    if (type === 'pos' || type === 'range') {
+      return `[${srcName}] ${parts[3]}º Puesto`;
+    }
+    if (type === 'path_winner') {
+      return `[${srcName}] Ganador Ruta ${String.fromCharCode(65 + (parseInt(parts[3]) || 0))}`;
+    }
+    if (type === 'best_thirds') {
+      return `[${srcName}] ${parts[3]}º Mejor 3º`;
+    }
+    if (type === 'group_pos') {
+      const gLetter = String.fromCharCode(65 + (parseInt(parts[3]) || 0));
+      return `[${srcName}] ${parts[4]}º Grp ${gLetter}`;
+    }
+    return `[${srcName}] Cupo`;
+  };
+
+  // Usar los objetos con estadísticas directamente si existen, o mapear desde IDs
+  const rows = groupData.length > 0 ? groupData : groupTeamIds.map(id => ({ id, pts: 0, pj: 0, gf: 0, gc: 0 }));
 
   return (
     <div className="flex flex-col">
@@ -482,34 +538,20 @@ export const StandingsTable = ({ tournament, teams, groupTeamIds, isGroups = fal
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-100 font-bold">
-          {groupTeamIds.map((teamId, idx) => {
-            if (teamId === 'TBD') return null;
-            const team = teams.find(t => t.id === teamId);
-            if (!team) return null;
+          {rows.map((row, idx) => {
+            const teamId = row.id;
+            if (!teamId || teamId === 'TBD') return null;
 
+            const isSlot = teamId.startsWith('SLOT:');
+            const team = teams.find(t => t.id === teamId);
             const rank = idx + 1;
             const customColor = getPositionStyle(rank);
 
-            let pts = 0, pj = 0, gf = 0, gc = 0;
-            tournament.fixtures?.forEach(m => {
-              if (m.played && (m.home === teamId || m.away === teamId)) {
-                if (isGroups && m.group !== gIdx) return;
-                const hs = Number(m.homeScore) || 0;
-                const as = Number(m.awayScore) || 0;
-                pj++;
-                if (m.home === teamId) {
-                  gf += hs; gc += as;
-                  if (hs > as) pts += tournament.winPoints ?? 3;
-                  else if (hs < as) pts += tournament.losePoints ?? 0;
-                  else pts += tournament.drawPoints ?? 1;
-                } else {
-                  gf += as; gc += hs;
-                  if (as > hs) pts += tournament.winPoints ?? 3;
-                  else if (as < hs) pts += tournament.losePoints ?? 0;
-                  else pts += tournament.drawPoints ?? 1;
-                }
-              }
-            });
+            const pts = row.pts ?? 0;
+            const pj = row.pj ?? 0;
+            const dg = (row.gf ?? 0) - (row.gc ?? 0);
+
+            const displayName = isSlot ? formatSlotLabel(teamId) : (team?.name || teamId);
 
             return (
               <tr
@@ -531,15 +573,30 @@ export const StandingsTable = ({ tournament, teams, groupTeamIds, isGroups = fal
                   </span>
                 </td>
                 <td className="px-3 py-2.5 flex items-center space-x-2">
-                  <Shield team={team} size="sm" />
-                  <span className="truncate max-w-[140px] text-gray-800">{team.name}</span>
+                  {isSlot ? (
+                    <div className="w-6 h-6 rounded-full bg-amber-400 text-slate-950 font-black text-[10px] flex items-center justify-center shrink-0 shadow-sm">
+                      📥
+                    </div>
+                  ) : (
+                    <Shield team={team} size="sm" />
+                  )}
+                  <span className={`truncate max-w-[170px] ${isSlot ? 'text-amber-900 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200 text-[11px]' : 'text-gray-800'}`}>
+                    {displayName}
+                  </span>
                 </td>
                 <td className="px-3 py-2.5 text-center font-black text-green-700">{pts}</td>
                 <td className="px-3 py-2.5 text-center text-gray-500">{pj}</td>
-                <td className="px-3 py-2.5 text-center text-gray-500">{gf - gc}</td>
+                <td className="px-3 py-2.5 text-center text-gray-500">{dg}</td>
               </tr>
             );
           })}
+          {rows.length === 0 && (
+            <tr>
+              <td colSpan={5} className="text-center py-4 text-gray-400 italic font-medium">
+                Sin equipos asignados a este grupo.
+              </td>
+            </tr>
+          )}
         </tbody>
       </table>
     </div>
